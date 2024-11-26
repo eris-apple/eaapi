@@ -1,6 +1,7 @@
 package eaapi
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -10,10 +11,24 @@ type AppError struct {
 	Message string `json:"message"`
 }
 
-func (e AppError) AsMessageError() *AppError {
-	return &AppError{
-		Message: e.Message,
-	}
+type SuccessResponse struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+type FailedResponse struct {
+	Status  ResponseStatus `json:"status"`
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+}
+
+func (e *AppError) Error() error {
+	return errors.New(e.Message)
+}
+
+func (e *AppError) String() string {
+	return e.Message
 }
 
 func NewNotFoundError(message string) *AppError {
@@ -22,6 +37,10 @@ func NewNotFoundError(message string) *AppError {
 
 func NewUnexpectedError(message string) *AppError {
 	return &AppError{Code: http.StatusInternalServerError, Message: message}
+}
+
+func NewInternalServerError() *AppError {
+	return &AppError{Code: http.StatusInternalServerError, Message: "internal server error"}
 }
 
 func NewForbiddenError(message string) *AppError {
@@ -38,18 +57,6 @@ func NewAlreadyExistError(message string) *AppError {
 
 func NewValidationError(message string) *AppError {
 	return &AppError{Code: http.StatusBadRequest, Message: message}
-}
-
-type SuccessResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
-}
-
-type FailedResponse struct {
-	Status  ResponseStatus `json:"status"`
-	Code    int            `json:"code"`
-	Message string         `json:"message"`
 }
 
 func ResponseHandler(ctx *gin.Context, code int, message string, data interface{}) {
@@ -74,6 +81,10 @@ func NewHandlerNotFoundError(ctx *gin.Context, err *AppError) {
 	}
 
 	ErrorResponseHandler(ctx, err)
+}
+
+func NewHandlerInternalServerError(ctx *gin.Context) {
+	ErrorResponseHandler(ctx, NewInternalServerError())
 }
 
 func NewHandlerUnexpectedError(ctx *gin.Context, err *AppError) {
